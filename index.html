@@ -2,12 +2,13 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>3D Background</title>
+  <title>Car Scene with Camera Controls</title>
   <style>
     body, html {
       margin: 0;
       height: 100%;
       overflow: hidden;
+      font-family: sans-serif;
     }
 
     #bg-canvas {
@@ -24,17 +25,49 @@
       z-index: 1;
       color: white;
       text-align: center;
-      margin-top: 20vh;
-      font-family: sans-serif;
+      padding-top: 20vh;
+    }
+
+    .controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 2;
+      display: flex;
+      gap: 10px;
+    }
+
+    .controls button {
+      padding: 8px 14px;
+      font-size: 14px;
+      border: none;
+      border-radius: 8px;
+      background-color: #222;
+      color: white;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .controls button:hover {
+      background-color: #444;
     }
   </style>
 </head>
 <body>
   <canvas id="bg-canvas"></canvas>
   <div class="content">
-    <h1>Welcome to My 3D Site</h1>
-    <p>Model is the background 🎉</p>
+    <h1>Explore the Car</h1>
+    <p>Use buttons below to switch camera views.</p>
+  </div>
+  <div class="controls">
+    <button onclick="moveCamera('front')">Front</button>
+    <button onclick="moveCamera('back')">Back</button>
+    <button onclick="moveCamera('left')">Left</button>
+    <button onclick="moveCamera('right')">Right</button>
+    <button onclick="moveCamera('top')">Top</button>
+    <button onclick="moveCamera('reset')">Reset</button>
   </div>
   <script type="module" src="script.js"></script>
 </body>
-</html>
+</html>￼Enter
