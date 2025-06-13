@@ -1,23 +1,25 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>Car Scene with Camera Controls</title>
+  <meta charset="UTF-8" />
+  <title>3D Car Viewer</title>
   <style>
-    body, html {
+    html, body {
       margin: 0;
-      height: 100%;
+      padding: 0;
       overflow: hidden;
+      height: 100%;
       font-family: sans-serif;
+      background: black;
     }
 
     #bg-canvas {
       position: fixed;
       top: 0;
       left: 0;
-      z-index: -1;
       width: 100%;
       height: 100%;
+      z-index: -1;
     }
 
     .content {
@@ -25,7 +27,7 @@
       z-index: 1;
       color: white;
       text-align: center;
-      padding-top: 20vh;
+      margin-top: 20vh;
     }
 
     .controls {
@@ -35,31 +37,34 @@
       transform: translateX(-50%);
       z-index: 2;
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
     }
 
     .controls button {
-      padding: 8px 14px;
+      padding: 10px 16px;
       font-size: 14px;
       border: none;
       border-radius: 8px;
-      background-color: #222;
+      background: #222;
       color: white;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: background 0.3s;
     }
 
     .controls button:hover {
-      background-color: #444;
+      background: #444;
     }
   </style>
 </head>
 <body>
   <canvas id="bg-canvas"></canvas>
+
   <div class="content">
-    <h1>Explore the Car</h1>
-    <p>Use buttons below to switch camera views.</p>
+    <h1>3D Car Viewer</h1>
+    <p>Use the buttons below to explore different views.</p>
   </div>
+
   <div class="controls">
     <button onclick="moveCamera('front')">Front</button>
     <button onclick="moveCamera('back')">Back</button>
@@ -68,6 +73,7 @@
     <button onclick="moveCamera('top')">Top</button>
     <button onclick="moveCamera('reset')">Reset</button>
   </div>
+
   <script type="module" src="script.js"></script>
 </body>
-</html>￼Enter
+</html>
