@@ -3,15 +3,14 @@ import { GLTFLoader } from 'https://cdn.jsdelivr.net/npm/three@0.160.0/examples/
 
 let camera, scene, renderer;
 let carModel;
-let targetPosition = new THREE.Vector3();
-let lookAtTarget = new THREE.Vector3(0, 0, 0); // Default look-at point
+const canvas = document.getElementById('bg-canvas');
 
+// Init
 init();
 animate();
 
 function init() {
-  const canvas = document.getElementById('bg-canvas');
-  renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(window.devicePixelRatio);
 
@@ -19,9 +18,9 @@ function init() {
 
   camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
   camera.position.set(0, 2, 5);
-  targetPosition.copy(camera.position); // Start position
+  targetPosition.copy(camera.position);
 
-  const light = new THREE.HemisphereLight(0xffffff, 0x444444);
+  const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.2);
   scene.add(light);
 
   const loader = new GLTFLoader();
@@ -40,17 +39,19 @@ function onWindowResize() {
   renderer.setSize(window.innerWidth, window.innerHeight);
 }
 
+// Camera control
+const targetPosition = new THREE.Vector3();
+const lookAtTarget = new THREE.Vector3(0, 1, 0); // adjust for car center
+
+// Animate
 function animate() {
   requestAnimationFrame(animate);
-
-  // Smooth camera movement
   camera.position.lerp(targetPosition, 0.05);
   camera.lookAt(lookAtTarget);
-
   renderer.render(scene, camera);
 }
 
-// Move camera to predefined views
+// Camera movement
 window.moveCamera = function(view) {
   const dist = 5;
   switch(view) {
@@ -67,7 +68,7 @@ window.moveCamera = function(view) {
       targetPosition.set(dist, 2, 0);
       break;
     case 'top':
-      targetPosition.set(0, dist + 1, 0.01); // 0.01 to avoid lookAt jump
+      targetPosition.set(0, dist + 1, 0.01);
       break;
     case 'reset':
     default:
