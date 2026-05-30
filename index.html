@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D PDF Flipbook with Toolbar and Upload</title>
+    <title>3D PDF Flipbook with Toolbar, Upload, Panning, and Lock</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,7 +14,8 @@
             align-items: center;
             min-height: 100vh;
             margin: 0;
-            overflow: hidden; /* Prevents scrollbars during zoom */
+            overflow: hidden; 
+            cursor: default; 
         }
 
         #toolbar {
@@ -27,7 +28,7 @@
             align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
             z-index: 10; 
-            flex-wrap: wrap; /* Allows wrapping on smaller screens */
+            flex-wrap: wrap; 
             justify-content: center;
         }
 
@@ -45,6 +46,16 @@
 
         button:hover, .upload-label:hover { background-color: #2980b9; }
         
+        #btn-reset { background-color: #e67e22; }
+        #btn-reset:hover { background-color: #d35400; }
+
+        /* --- NEW: Button styles for Full Screen and Lock --- */
+        #btn-fullscreen { background-color: #8e44ad; }
+        #btn-fullscreen:hover { background-color: #9b59b6; }
+        
+        #btn-lock { background-color: #27ae60; }
+        #btn-lock:hover { background-color: #2ecc71; }
+
         input[type="number"] {
             width: 50px;
             padding: 5px;
@@ -53,7 +64,6 @@
             border: 1px solid #ccc;
         }
 
-        /* --- NEW: Hide standard file input and style a label instead --- */
         input[type="file"] {
             display: none;
         }
@@ -68,6 +78,7 @@
         #zoom-wrapper {
             transition: transform 0.3s ease; 
             transform-origin: top center;
+            will-change: transform; 
         }
 
         #book-container {
@@ -93,19 +104,24 @@
 <body>
 
     <div id="toolbar">
-        <label for="pdf-upload" class="upload-label">Upload PDF</label>
+        <label for="pdf-upload" class="upload-label">Upload</label>
         <input type="file" id="pdf-upload" accept="application/pdf">
 
         <div class="divider"></div>
 
-        <button id="btn-prev">Prev Page</button>
+        <button id="btn-prev">Prev</button>
         <span>Page: <input type="number" id="page-input" value="1" min="1"> / <span id="page-total">?</span></span>
-        <button id="btn-next">Next Page</button>
+        <button id="btn-next">Next</button>
         
         <div class="divider"></div>
         
         <button id="btn-zoom-out">Zoom -</button>
         <button id="btn-zoom-in">Zoom +</button>
+        <button id="btn-reset">Reset</button>
+
+        <div class="divider"></div>
+        <button id="btn-fullscreen">Full Screen</button>
+        <button id="btn-lock">Lock Screen</button>
     </div>
     
     <div id="zoom-wrapper">
@@ -119,33 +135,46 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const bookContainer = document.getElementById('book-container');
+        const zoomWrapper = document.getElementById('zoom-wrapper');
         let pageFlipInstance = null; 
         let totalPages = 0;
+        
         let currentZoom = 1.0;
-        const zoomWrapper = document.getElementById('zoom-wrapper');
+        let isDragging = false;
+        let startX = 0, startY = 0;
+        let translateX = 0, translateY = 0;
 
-        // --- NEW: Wrapped PDF loading logic into a reusable function ---
+        // --- NEW: Lock State Variable ---
+        let isLocked = false; 
+
+        function updateTransform() {
+            zoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
+        }
+
+        function resetView() {
+            currentZoom = 1.0;
+            translateX = 0;
+            translateY = 0;
+            zoomWrapper.style.transition = 'transform 0.3s ease'; 
+            updateTransform();
+        }
+
         function renderPDF(pdfSource) {
-            // 1. Clean up existing book if it exists
             if (pageFlipInstance) {
                 pageFlipInstance.destroy();
                 pageFlipInstance = null;
             }
             
-            // 2. Reset DOM and UI states
             bookContainer.innerHTML = ''; 
-            currentZoom = 1.0;
-            zoomWrapper.style.transform = `scale(${currentZoom})`;
+            resetView(); 
             document.getElementById('page-input').value = 1;
 
-            // 3. Load the new document
             pdfjsLib.getDocument(pdfSource).promise.then(pdfDoc => {
                 totalPages = pdfDoc.numPages;
                 document.getElementById('page-total').textContent = totalPages;
                 
                 const pageElements = [];
 
-                // Generate HTML pages
                 for (let i = 1; i <= totalPages; i++) {
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'my-page';
@@ -155,7 +184,6 @@
                     pageElements.push({ pageNum: i, canvas: canvas });
                 }
 
-                // Initialize PageFlip
                 pageFlipInstance = new St.PageFlip(bookContainer, {
                     width: 400, 
                     height: 500, 
@@ -165,7 +193,6 @@
 
                 pageFlipInstance.loadFromHTML(document.querySelectorAll('.my-page'));
 
-                // Render PDF onto canvases
                 pageElements.forEach(item => {
                     pdfDoc.getPage(item.pageNum).then(page => {
                         const viewport = page.getViewport({ scale: 1.5 });
@@ -178,45 +205,32 @@
                     });
                 });
 
-                // Sync UI when page turns
                 pageFlipInstance.on('flip', (e) => {
                     document.getElementById('page-input').value = e.data + 1;
                 });
 
             }).catch(err => {
                 console.error("Error loading PDF: ", err);
-                alert("There was an error loading the PDF. Check the console for details.");
+                alert("There was an error loading the PDF.");
             });
         }
 
-        // Load the default demo PDF on startup
         const defaultUrl = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
         renderPDF(defaultUrl);
 
-        // --- NEW: Handle File Upload ---
         document.getElementById('pdf-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
-            
             if (file && file.type === 'application/pdf') {
                 const reader = new FileReader();
-                
-                // When the file is done reading, pass the data to our render function
                 reader.onload = function(event) {
                     const typedarray = new Uint8Array(event.target.result);
                     renderPDF(typedarray);
                 };
-                
-                // Read the file as an ArrayBuffer
                 reader.readAsArrayBuffer(file);
-            } else {
-                alert('Please select a valid PDF file.');
             }
-            
-            // Clear the input so the same file can be uploaded again if needed
             e.target.value = ''; 
         });
 
-        // Toolbar Button Logic (Unchanged)
         document.getElementById('btn-prev').addEventListener('click', () => {
             if (pageFlipInstance) pageFlipInstance.flipPrev();
         });
@@ -237,18 +251,101 @@
         });
 
         document.getElementById('btn-zoom-in').addEventListener('click', () => {
+            if (isLocked) return; // Prevent zooming if locked
             if (currentZoom < 2.5) { 
                 currentZoom += 0.2;
-                zoomWrapper.style.transform = `scale(${currentZoom})`;
+                updateTransform();
             }
         });
 
         document.getElementById('btn-zoom-out').addEventListener('click', () => {
+            if (isLocked) return; // Prevent zooming if locked
             if (currentZoom > 0.6) { 
                 currentZoom -= 0.2;
-                zoomWrapper.style.transform = `scale(${currentZoom})`;
+                updateTransform();
             }
         });
+
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            if (isLocked) return; // Prevent reset if locked
+            resetView();
+        });
+
+        // --- NEW: Full Screen Logic ---
+        const btnFullscreen = document.getElementById('btn-fullscreen');
+        
+        btnFullscreen.addEventListener('click', () => {
+            if (!document.fullscreenElement) {
+                // Request fullscreen on the entire document
+                document.documentElement.requestFullscreen().catch(err => {
+                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
+                });
+            } else {
+                // Exit fullscreen
+                document.exitFullscreen();
+            }
+        });
+
+        // Listen for fullscreen changes (e.g., user pressing ESC key) to update button text
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement) {
+                btnFullscreen.textContent = 'Exit Full Screen';
+            } else {
+                btnFullscreen.textContent = 'Full Screen';
+            }
+        });
+
+        // --- NEW: Lock Screen Logic ---
+        const btnLock = document.getElementById('btn-lock');
+        
+        btnLock.addEventListener('click', () => {
+            isLocked = !isLocked;
+            
+            if (isLocked) {
+                btnLock.textContent = 'Unlock Screen';
+                btnLock.style.backgroundColor = '#c0392b'; // Change to Red
+                // Disable physical dragging of the flipbook pages
+                bookContainer.style.pointerEvents = 'none'; 
+            } else {
+                btnLock.textContent = 'Lock Screen';
+                btnLock.style.backgroundColor = ''; // Revert to CSS default (Green)
+                // Re-enable physical dragging of the flipbook pages
+                bookContainer.style.pointerEvents = 'auto'; 
+            }
+        });
+
+        // Drag to Pan Logic
+        window.addEventListener('mousedown', (e) => {
+            if (isLocked) return; // --- NEW: Prevent panning if locked
+            
+            if (e.target.closest('#toolbar')) return;
+
+            if (currentZoom === 1.0 && e.target.tagName.toLowerCase() === 'canvas') {
+                return;
+            }
+
+            isDragging = true;
+            zoomWrapper.style.transition = 'none';
+            startX = e.clientX - translateX;
+            startY = e.clientY - translateY;
+            document.body.style.cursor = 'grabbing';
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!isDragging) return;
+            translateX = e.clientX - startX;
+            translateY = e.clientY - startY;
+            updateTransform();
+        });
+
+        window.addEventListener('mouseup', () => {
+            if (isDragging) {
+                isDragging = false;
+                zoomWrapper.style.transition = 'transform 0.3s ease';
+                document.body.style.cursor = 'default';
+            }
+        });
+
     </script>
 </body>
 </html>
