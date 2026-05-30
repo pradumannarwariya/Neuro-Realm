@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D PDF Flipbook with Toolbar</title>
+    <title>3D PDF Flipbook with Toolbar and Upload</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,7 +17,6 @@
             overflow: hidden; /* Prevents scrollbars during zoom */
         }
 
-        /* --- NEW: Toolbar Styling --- */
         #toolbar {
             background-color: #34495e;
             padding: 15px 25px;
@@ -27,10 +26,12 @@
             gap: 15px;
             align-items: center;
             box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-            z-index: 10; /* Ensures toolbar stays on top of the zoomed book */
+            z-index: 10; 
+            flex-wrap: wrap; /* Allows wrapping on smaller screens */
+            justify-content: center;
         }
 
-        button {
+        button, .upload-label {
             padding: 8px 16px;
             background-color: #3498db;
             color: white;
@@ -39,9 +40,10 @@
             cursor: pointer;
             font-weight: bold;
             transition: background-color 0.2s;
+            font-size: 14px;
         }
 
-        button:hover { background-color: #2980b9; }
+        button:hover, .upload-label:hover { background-color: #2980b9; }
         
         input[type="number"] {
             width: 50px;
@@ -51,6 +53,11 @@
             border: 1px solid #ccc;
         }
 
+        /* --- NEW: Hide standard file input and style a label instead --- */
+        input[type="file"] {
+            display: none;
+        }
+
         .divider {
             width: 2px;
             height: 30px;
@@ -58,9 +65,8 @@
             margin: 0 10px;
         }
 
-        /* --- NEW: Zoom Wrapper --- */
         #zoom-wrapper {
-            transition: transform 0.3s ease; /* Smooth zoom animation */
+            transition: transform 0.3s ease; 
             transform-origin: top center;
         }
 
@@ -87,6 +93,11 @@
 <body>
 
     <div id="toolbar">
+        <label for="pdf-upload" class="upload-label">Upload PDF</label>
+        <input type="file" id="pdf-upload" accept="application/pdf">
+
+        <div class="divider"></div>
+
         <button id="btn-prev">Prev Page</button>
         <span>Page: <input type="number" id="page-input" value="1" min="1"> / <span id="page-total">?</span></span>
         <button id="btn-next">Next Page</button>
@@ -98,108 +109,142 @@
     </div>
     
     <div id="zoom-wrapper">
-        <div id="book-container">
-            </div>
+        <div id="book-container"></div>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
     
     <script>
-        const url = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const bookContainer = document.getElementById('book-container');
-        let pageFlipInstance = null; // Store globally so our buttons can access it
+        let pageFlipInstance = null; 
         let totalPages = 0;
-
-        // Zoom State
         let currentZoom = 1.0;
         const zoomWrapper = document.getElementById('zoom-wrapper');
 
-        pdfjsLib.getDocument(url).promise.then(pdfDoc => {
-            totalPages = pdfDoc.numPages;
-            document.getElementById('page-total').textContent = totalPages;
-            
-            const pageElements = [];
-
-            // Generate HTML pages
-            for (let i = 1; i <= totalPages; i++) {
-                const pageDiv = document.createElement('div');
-                pageDiv.className = 'my-page';
-                const canvas = document.createElement('canvas');
-                pageDiv.appendChild(canvas);
-                bookContainer.appendChild(pageDiv);
-                pageElements.push({ pageNum: i, canvas: canvas });
+        // --- NEW: Wrapped PDF loading logic into a reusable function ---
+        function renderPDF(pdfSource) {
+            // 1. Clean up existing book if it exists
+            if (pageFlipInstance) {
+                pageFlipInstance.destroy();
+                pageFlipInstance = null;
             }
+            
+            // 2. Reset DOM and UI states
+            bookContainer.innerHTML = ''; 
+            currentZoom = 1.0;
+            zoomWrapper.style.transform = `scale(${currentZoom})`;
+            document.getElementById('page-input').value = 1;
 
-            // Initialize PageFlip
-            pageFlipInstance = new St.PageFlip(bookContainer, {
-                width: 400, 
-                height: 500, 
-                showCover: true, 
-                maxShadowOpacity: 0.5, 
-            });
+            // 3. Load the new document
+            pdfjsLib.getDocument(pdfSource).promise.then(pdfDoc => {
+                totalPages = pdfDoc.numPages;
+                document.getElementById('page-total').textContent = totalPages;
+                
+                const pageElements = [];
 
-            pageFlipInstance.loadFromHTML(document.querySelectorAll('.my-page'));
+                // Generate HTML pages
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.className = 'my-page';
+                    const canvas = document.createElement('canvas');
+                    pageDiv.appendChild(canvas);
+                    bookContainer.appendChild(pageDiv);
+                    pageElements.push({ pageNum: i, canvas: canvas });
+                }
 
-            // Render PDF onto canvases
-            pageElements.forEach(item => {
-                pdfDoc.getPage(item.pageNum).then(page => {
-                    const viewport = page.getViewport({ scale: 1.5 });
-                    item.canvas.width = viewport.width;
-                    item.canvas.height = viewport.height;
-                    page.render({
-                        canvasContext: item.canvas.getContext('2d'),
-                        viewport: viewport
+                // Initialize PageFlip
+                pageFlipInstance = new St.PageFlip(bookContainer, {
+                    width: 400, 
+                    height: 500, 
+                    showCover: true, 
+                    maxShadowOpacity: 0.5, 
+                });
+
+                pageFlipInstance.loadFromHTML(document.querySelectorAll('.my-page'));
+
+                // Render PDF onto canvases
+                pageElements.forEach(item => {
+                    pdfDoc.getPage(item.pageNum).then(page => {
+                        const viewport = page.getViewport({ scale: 1.5 });
+                        item.canvas.width = viewport.width;
+                        item.canvas.height = viewport.height;
+                        page.render({
+                            canvasContext: item.canvas.getContext('2d'),
+                            viewport: viewport
+                        });
                     });
                 });
+
+                // Sync UI when page turns
+                pageFlipInstance.on('flip', (e) => {
+                    document.getElementById('page-input').value = e.data + 1;
+                });
+
+            }).catch(err => {
+                console.error("Error loading PDF: ", err);
+                alert("There was an error loading the PDF. Check the console for details.");
             });
+        }
 
-            // --- NEW: Event Listener to sync UI when a page is turned manually ---
-            pageFlipInstance.on('flip', (e) => {
-                // e.data holds the current page index (starts at 0)
-                document.getElementById('page-input').value = e.data + 1;
-            });
+        // Load the default demo PDF on startup
+        const defaultUrl = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
+        renderPDF(defaultUrl);
 
-        }).catch(err => console.error("Error loading PDF: ", err));
+        // --- NEW: Handle File Upload ---
+        document.getElementById('pdf-upload').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            
+            if (file && file.type === 'application/pdf') {
+                const reader = new FileReader();
+                
+                // When the file is done reading, pass the data to our render function
+                reader.onload = function(event) {
+                    const typedarray = new Uint8Array(event.target.result);
+                    renderPDF(typedarray);
+                };
+                
+                // Read the file as an ArrayBuffer
+                reader.readAsArrayBuffer(file);
+            } else {
+                alert('Please select a valid PDF file.');
+            }
+            
+            // Clear the input so the same file can be uploaded again if needed
+            e.target.value = ''; 
+        });
 
-        // --- NEW: Toolbar Button Logic ---
-
-        // Previous Page
+        // Toolbar Button Logic (Unchanged)
         document.getElementById('btn-prev').addEventListener('click', () => {
             if (pageFlipInstance) pageFlipInstance.flipPrev();
         });
 
-        // Next Page
         document.getElementById('btn-next').addEventListener('click', () => {
             if (pageFlipInstance) pageFlipInstance.flipNext();
         });
 
-        // Jump to specific page via input
         document.getElementById('page-input').addEventListener('change', (e) => {
             if (!pageFlipInstance) return;
-            let targetPage = parseInt(e.target.value, 10) - 1; // Convert human page to array index
+            let targetPage = parseInt(e.target.value, 10) - 1; 
             
-            // Keep within boundaries
             if (targetPage < 0) targetPage = 0;
             if (targetPage >= totalPages) targetPage = totalPages - 1;
             
             pageFlipInstance.flip(targetPage);
-            e.target.value = targetPage + 1; // Reset input to valid number if they typed out of bounds
+            e.target.value = targetPage + 1; 
         });
 
-        // Zoom In
         document.getElementById('btn-zoom-in').addEventListener('click', () => {
-            if (currentZoom < 2.5) { // Cap max zoom
+            if (currentZoom < 2.5) { 
                 currentZoom += 0.2;
                 zoomWrapper.style.transform = `scale(${currentZoom})`;
             }
         });
 
-        // Zoom Out
         document.getElementById('btn-zoom-out').addEventListener('click', () => {
-            if (currentZoom > 0.6) { // Cap min zoom
+            if (currentZoom > 0.6) { 
                 currentZoom -= 0.2;
                 zoomWrapper.style.transform = `scale(${currentZoom})`;
             }
