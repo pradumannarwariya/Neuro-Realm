@@ -8,12 +8,10 @@
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
 
     <style>
-        /* CSS Variables for Dynamic Zoom and Theming */
+        /* CSS Variables */
         :root {
-            --book-width: 800px; /* 400px per page * 2 pages */
+            --book-width: 800px;
             --book-height: 600px;
-            
-            /* Theme Colors */
             --theme-black: #0a0a0a;
             --theme-grey: #1f1f24;
             --theme-magenta: #ff66ff;
@@ -27,7 +25,6 @@
                 linear-gradient(rgba(51, 170, 255, 0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(51, 170, 255, 0.05) 1px, transparent 1px);
             background-size: 40px 40px;
-            
             color: #ffffff;
             display: flex;
             flex-direction: column;
@@ -36,7 +33,7 @@
             margin: 0;
             padding: 20px;
             box-sizing: border-box;
-            overflow: hidden; /* Prevent body scroll, handled by internal panning */
+            overflow: hidden; 
         }
 
         /* --- Header & Layout --- */
@@ -54,75 +51,44 @@
         }
 
         .cyber-header h1 {
-            margin: 0;
-            color: var(--theme-magenta);
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(255, 102, 255, 0.5);
+            margin: 0; color: var(--theme-magenta); text-transform: uppercase;
+            letter-spacing: 2px; text-shadow: 0 0 10px rgba(255, 102, 255, 0.5);
         }
-
         .cyber-header p { margin: 10px 0 0; color: #aaaaaa; font-size: 14px; }
 
         .main-content {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            width: 100%;
-            max-width: 950px;
+            flex: 1; display: flex; flex-direction: column; align-items: center;
+            width: 100%; max-width: 950px;
         }
 
-        /* --- Input & Control Styling --- */
+        /* --- Controls --- */
         .upload-section { margin-bottom: 20px; display: flex; justify-content: center; width: 100%; }
         input[type="file"] { display: none; }
 
         .cyber-btn {
-            padding: 8px 14px;
-            font-size: 14px;
-            cursor: pointer;
-            border: 1px solid var(--theme-blue);
-            border-radius: 5px;
-            background-color: var(--theme-grey);
-            color: var(--theme-blue);
-            font-family: 'Orbitron', sans-serif;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            outline: none;
+            padding: 8px 14px; font-size: 14px; cursor: pointer;
+            border: 1px solid var(--theme-blue); border-radius: 5px;
+            background-color: var(--theme-grey); color: var(--theme-blue);
+            font-family: 'Orbitron', sans-serif; text-transform: uppercase;
+            transition: all 0.3s ease; outline: none; display: flex; align-items: center; gap: 8px;
         }
-
         .cyber-btn:hover {
-            border-color: var(--theme-magenta);
-            color: var(--theme-magenta);
-            box-shadow: 0 0 10px rgba(255, 102, 255, 0.4);
-            background-color: #2a2a35;
+            border-color: var(--theme-magenta); color: var(--theme-magenta);
+            box-shadow: 0 0 10px rgba(255, 102, 255, 0.4); background-color: #2a2a35;
         }
-
         .cyber-btn:active { transform: scale(0.95); }
 
-        /* --- Control Panel Styling --- */
         #control-panel {
-            display: none; 
-            background-color: var(--theme-grey);
-            border: 1px solid var(--theme-blue);
-            border-radius: 8px;
-            padding: 15px 20px;
-            margin-top: 20px;
-            margin-bottom: 20px;
-            width: 100%;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            flex-wrap: wrap;
-            gap: 15px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
-            box-sizing: border-box;
+            display: none; background-color: var(--theme-grey);
+            border: 1px solid var(--theme-blue); border-radius: 8px;
+            padding: 15px 20px; margin-top: 20px; margin-bottom: 20px;
+            width: 100%; display: flex; justify-content: space-between;
+            align-items: center; flex-wrap: wrap; gap: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5); box-sizing: border-box;
         }
-
         .control-group { display: flex; gap: 8px; align-items: center; }
 
-        .page-display { 
-            font-weight: bold; color: #ffffff; font-size: 14px; min-width: 110px; text-align: center;
-        }
+        .page-display { font-weight: bold; color: #ffffff; font-size: 14px; min-width: 110px; text-align: center; }
         .page-display span { color: var(--theme-magenta); }
 
         .jump-input {
@@ -130,29 +96,17 @@
             color: var(--theme-magenta); padding: 6px; border-radius: 4px; text-align: center;
             font-family: 'Orbitron', sans-serif;
         }
-        .jump-input:focus { outline: none; border-color: var(--theme-magenta); }
 
-        /* --- Flipbook Viewport --- */
+        /* --- Viewport & Interactive Elements --- */
         .flipbook-container {
-            display: none; 
-            position: relative;
-            width: 100%;
-            height: 60vh; /* Responsive height for the tablet screen concept */
-            min-height: 400px;
-            border: 1px solid var(--theme-blue);
-            background-color: var(--theme-black);
-            overflow: hidden; /* Crucial for panning boundary enforcement */
-            border-radius: 8px;
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            display: none; position: relative; width: 100%; height: 60vh; min-height: 400px;
+            border: 1px solid var(--theme-blue); background-color: var(--theme-black);
+            overflow: hidden; border-radius: 8px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
         }
 
         #flipbook {
-            border: 2px solid var(--theme-grey);
-            background-color: #fff;
-            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8);
-            /* Transform origin must be top left for the controller matrix logic */
-            transform-origin: top left;
-            /* Transition removed from transform to make panning instantly responsive */
+            border: 2px solid var(--theme-grey); background-color: #fff;
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8); transform-origin: top left;
         }
 
         .page {
@@ -162,42 +116,62 @@
         }
         .page canvas { display: block; max-width: 100%; max-height: 100%; }
 
-        /* Fullscreen styles */
-        :-webkit-full-screen .flipbook-container { height: 100vh; border: none; border-radius: 0; }
-        :fullscreen .flipbook-container { height: 100vh; border: none; border-radius: 0; }
-
-        /* --- Footer --- */
-        .cyber-footer {
-            margin-top: auto; padding: 10px 0; text-align: center; width: 100%;
-            border-top: 1px solid var(--theme-grey); color: #888; font-size: 13px; letter-spacing: 1px;
+        /* --- Interaction Overlay (For Drag/Pinch) --- */
+        #interaction-overlay {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            z-index: 50; cursor: grab; touch-action: none;
+            display: none; /* Hidden when Locked */
         }
+        #interaction-overlay:active { cursor: grabbing; }
+
+        /* State Classes */
+        .unlocked-mode #interaction-overlay { display: block; }
+        .locked-mode #interaction-overlay { display: none; }
+
+        /* Floating Lock Button */
+        .floating-lock-btn {
+            position: absolute; top: 15px; right: 15px; z-index: 100;
+            background-color: rgba(31, 31, 36, 0.85); backdrop-filter: blur(5px);
+        }
+
+        /* Fullscreen modifications */
+        :-webkit-full-screen .flipbook-container { height: 100vh; width: 100vw; border: none; border-radius: 0; margin: 0; padding: 0; }
+        :fullscreen .flipbook-container { height: 100vh; width: 100vw; border: none; border-radius: 0; margin: 0; padding: 0; }
+        
+        .cyber-footer { margin-top: auto; padding: 10px 0; text-align: center; width: 100%; border-top: 1px solid var(--theme-grey); color: #888; font-size: 13px; letter-spacing: 1px; }
         .creator-name { font-weight: bold; color: var(--theme-blue); }
+        
+        @media (max-width: 600px) { .hide-mobile { display: none; } }
     </style>
 </head>
 <body>
 
-    <header class="cyber-header">
+    <header class="cyber-header" id="ui-header">
         <h1>// Cyber-Reader</h1>
         <p>Interactive Large Document Interface</p>
     </header>
 
-    <main class="main-content">
-        <section class="upload-section">
+    <main class="main-content" id="ui-main">
+        <section class="upload-section" id="ui-upload">
             <label for="pdf-upload" class="cyber-btn" id="upload-btn-label">Open PDF File</label>
             <input type="file" id="pdf-upload" accept="application/pdf">
         </section>
 
-        <div class="flipbook-container" id="viewer-container">
+        <div class="flipbook-container locked-mode" id="viewer-container">
             <div id="flipbook"></div>
+            
+            <div id="interaction-overlay"></div>
+            
+            <button id="lock-toggle-btn" class="cyber-btn floating-lock-btn" title="Toggle Pan/Zoom">
+                <span id="lock-icon">🔒</span> <span class="hide-mobile" id="lock-text">Locked (Turn Pages)</span>
+            </button>
         </div>
 
         <div id="control-panel">
             <div class="control-group">
-                <button id="first-page" class="cyber-btn" title="First Page">|&lt;</button>
                 <button id="prev-page" class="cyber-btn" title="Previous Page">&lt;</button>
                 <div class="page-display" id="page-counter">PG <span>--</span> / --</div>
                 <button id="next-page" class="cyber-btn" title="Next Page">&gt;</button>
-                <button id="last-page" class="cyber-btn" title="Last Page">&gt;|</button>
             </div>
             
             <div class="control-group">
@@ -206,22 +180,15 @@
             </div>
 
             <div class="control-group">
-                <button id="pan-left" class="cyber-btn" title="Pan Left">←</button>
-                <button id="pan-up" class="cyber-btn" title="Pan Up">↑</button>
-                <button id="pan-down" class="cyber-btn" title="Pan Down">↓</button>
-                <button id="pan-right" class="cyber-btn" title="Pan Right">→</button>
-            </div>
-
-            <div class="control-group">
                 <button id="zoom-out" class="cyber-btn" title="Zoom Out">-</button>
                 <button id="zoom-in" class="cyber-btn" title="Zoom In">+</button>
                 <button id="fit-screen" class="cyber-btn" title="Fit to Screen">Fit</button>
-                <button id="toggle-fullscreen" class="cyber-btn" title="Toggle Full Screen">[ ]</button>
+                <button id="toggle-fullscreen" class="cyber-btn" title="Toggle Full Screen">[ Full Screen ]</button>
             </div>
         </div>
     </main>
 
-    <footer class="cyber-footer">
+    <footer class="cyber-footer" id="ui-footer">
         Engineered by <span class="creator-name">Praduman Narwariya</span>
     </footer>
 
@@ -231,9 +198,9 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // --- Controller Class for Zoom/Pan/Fit ---
+        // --- Controller Class with Continuous Drag & Pinch ---
         class FlipbookController {
-            constructor(element, bookWidth, bookHeight, maxScale = 3.0, zoomStep = 0.1, panStep = 50) {
+            constructor(element, bookWidth, bookHeight, maxScale = 4.0) {
                 this.element = element;
                 this.bookWidth = bookWidth;
                 this.bookHeight = bookHeight;
@@ -242,10 +209,8 @@
                 this.scale = 1;
                 this.posX = 0;
                 this.posY = 0;
-                this.minScale = 0.1; // Allow zooming out slightly beyond fit if desired, or lock it in fitToScreen
+                this.minScale = 0.1; 
                 this.maxScale = maxScale;
-                this.zoomStep = zoomStep;
-                this.panStep = panStep;
             }
 
             fitToScreen(viewportWidth, viewportHeight) {
@@ -255,36 +220,35 @@
                 const scaleY = this.screenHeight / this.bookHeight;
                 
                 this.scale = Math.min(scaleX, scaleY);
-                this.minScale = this.scale; // Lock min scale to the viewport fit
+                this.minScale = this.scale; // Prevent shrinking smaller than viewport
 
-                this.centerBook();
+                this.posX = (this.screenWidth - (this.bookWidth * this.scale)) / 2;
+                this.posY = (this.screenHeight - (this.bookHeight * this.scale)) / 2;
                 this.applyTransform();
             }
 
-            centerBook() {
-                this.posX = (this.screenWidth - (this.bookWidth * this.scale)) / 2;
-                this.posY = (this.screenHeight - (this.bookHeight * this.scale)) / 2;
-            }
-
-            zoom(direction) {
-                const oldScale = this.scale;
-                let newScale = this.scale + (direction * this.zoomStep);
-                this.scale = Math.max(this.minScale, Math.min(newScale, this.maxScale));
-
-                const scaleRatio = this.scale / oldScale;
-                const centerX = this.screenWidth / 2;
-                const centerY = this.screenHeight / 2;
-
-                this.posX = centerX - ((centerX - this.posX) * scaleRatio);
-                this.posY = centerY - ((centerY - this.posY) * scaleRatio);
-
+            // Continuous Pan for Dragging
+            panExact(deltaX, deltaY) {
+                this.posX += deltaX;
+                this.posY += deltaY;
                 this.enforceBoundaries();
                 this.applyTransform();
             }
 
-            pan(deltaX, deltaY) {
-                this.posX += deltaX * this.panStep;
-                this.posY += deltaY * this.panStep;
+            // Anchored Zoom for Pinching / Buttons
+            zoomExact(targetScale, anchorX, anchorY) {
+                const oldScale = this.scale;
+                this.scale = Math.max(this.minScale, Math.min(targetScale, this.maxScale));
+                const scaleRatio = this.scale / oldScale;
+
+                // Adjust position relative to the anchor point
+                const rect = this.element.parentElement.getBoundingClientRect();
+                const relX = anchorX - rect.left;
+                const relY = anchorY - rect.top;
+
+                this.posX = relX - ((relX - this.posX) * scaleRatio);
+                this.posY = relY - ((relY - this.posY) * scaleRatio);
+
                 this.enforceBoundaries();
                 this.applyTransform();
             }
@@ -311,14 +275,13 @@
             }
         }
 
-        // --- Application Logic ---
-        const fileInput = document.getElementById('pdf-upload');
-        const uploadBtnLabel = document.getElementById('upload-btn-label');
+        // --- Globals & Setup ---
         const viewerContainer = document.getElementById('viewer-container');
         const flipbookEl = document.getElementById('flipbook');
-        const controlPanel = document.getElementById('control-panel');
-        const pageCounter = document.getElementById('page-counter');
-        const jumpInput = document.getElementById('jump-page-input');
+        const interactionOverlay = document.getElementById('interaction-overlay');
+        const lockToggleBtn = document.getElementById('lock-toggle-btn');
+        const lockIcon = document.getElementById('lock-icon');
+        const lockText = document.getElementById('lock-text');
 
         let pageFlip = null; 
         let pdfDoc = null;
@@ -328,29 +291,28 @@
 
         const pageWidth = 400; 
         const pageHeight = 600;
+        let isLocked = true; // True = Turning pages, False = Panning/Zooming
 
-        fileInput.addEventListener('change', async function(e) {
+        // --- File Upload & PDF Setup ---
+        document.getElementById('pdf-upload').addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
-                uploadBtnLabel.innerText = "Loading Document...";
+                document.getElementById('upload-btn-label').innerText = "Loading Document...";
                 const fileReader = new FileReader();
-                fileReader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    await loadPDF(typedarray);
-                };
+                fileReader.onload = async function() { await loadPDF(new Uint8Array(this.result)); };
                 fileReader.readAsArrayBuffer(file);
-            } else { alert("Please provide a valid PDF file."); }
+            }
         });
 
         async function loadPDF(pdfData) {
             flipbookEl.innerHTML = '';
-            if (pageFlip) { pageFlip.destroy(); }
+            if (pageFlip) pageFlip.destroy();
 
             try {
                 const loadingTask = pdfjsLib.getDocument(pdfData);
                 pdfDoc = await loadingTask.promise;
                 totalPages = pdfDoc.numPages;
-                jumpInput.max = totalPages;
+                document.getElementById('jump-page-input').max = totalPages;
 
                 for (let i = 1; i <= totalPages; i++) {
                     const pageDiv = document.createElement('div');
@@ -361,8 +323,8 @@
                 }
 
                 viewerContainer.style.display = 'block';
-                controlPanel.style.display = 'flex';
-                uploadBtnLabel.style.display = 'none';
+                document.getElementById('control-panel').style.display = 'flex';
+                document.getElementById('ui-upload').style.display = 'none';
 
                 pageFlip = new St.PageFlip(flipbookEl, {
                     width: pageWidth, height: pageHeight, size: "fixed",
@@ -372,19 +334,14 @@
                 });
 
                 pageFlip.loadFromHTML(document.querySelectorAll('.page'));
-                
-                // Initialize Controller
                 bookController = new FlipbookController(flipbookEl, pageWidth * 2, pageHeight);
                 triggerFitToScreen();
 
-                currentPageNum = 1;
-                updatePageCounter(currentPageNum);
-                
-                for(let i = 1; i <= Math.min(4, totalPages); i++) { renderPage(i, pageWidth, pageHeight); }
+                for(let i = 1; i <= Math.min(4, totalPages); i++) renderPage(i, pageWidth, pageHeight);
 
                 pageFlip.on('flip', (e) => {
                     currentPageNum = e.data + 1;
-                    updatePageCounter(currentPageNum);
+                    document.getElementById('page-counter').innerHTML = `PG <span>${currentPageNum}</span> / ${totalPages}`;
                     renderPage(currentPageNum - 1, pageWidth, pageHeight);
                     renderPage(currentPageNum, pageWidth, pageHeight);
                     renderPage(currentPageNum + 1, pageWidth, pageHeight);
@@ -392,11 +349,8 @@
                 });
 
                 initControls();
-
-            } catch (error) {
-                console.error("PDF Load error:", error);
-                alert("Failed to read the PDF document.");
-            }
+                initGestures();
+            } catch (error) { console.error("PDF Load error:", error); }
         }
 
         async function renderPage(pageNum, pw, ph) {
@@ -407,68 +361,149 @@
             const page = await pdfDoc.getPage(pageNum);
             const viewport = page.getViewport({ scale: 1 });
             const scale = Math.min(pw / viewport.width, ph / viewport.height);
-            const scaledViewport = page.getViewport({ scale: scale });
-
             const canvas = document.createElement('canvas');
             const context = canvas.getContext('2d');
-            canvas.width = scaledViewport.width;
-            canvas.height = scaledViewport.height;
+            const scaledViewport = page.getViewport({ scale });
+            canvas.width = scaledViewport.width; canvas.height = scaledViewport.height;
 
             await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
-            pageDiv.innerHTML = ''; 
-            pageDiv.appendChild(canvas);
-        }
-
-        function updatePageCounter(num) {
-            pageCounter.innerHTML = `PG <span>${num}</span> / ${totalPages}`;
+            pageDiv.innerHTML = ''; pageDiv.appendChild(canvas);
         }
 
         function triggerFitToScreen() {
             if (bookController) {
-                bookController.fitToScreen(viewerContainer.clientWidth, viewerContainer.clientHeight);
+                // Read exact dimensions of container
+                const rect = viewerContainer.getBoundingClientRect();
+                bookController.fitToScreen(rect.width, rect.height);
             }
         }
 
+        // --- Gesture Logic (Drag / Pinch) ---
+        function initGestures() {
+            let isDragging = false;
+            let lastX = 0, lastY = 0;
+            let initialPinchDist = null;
+            let initialScale = 1;
+
+            // Lock Toggle Button
+            lockToggleBtn.addEventListener('click', () => {
+                isLocked = !isLocked;
+                if (isLocked) {
+                    viewerContainer.classList.replace('unlocked-mode', 'locked-mode');
+                    lockIcon.innerText = "🔒";
+                    lockText.innerText = "Locked (Turn Pages)";
+                } else {
+                    viewerContainer.classList.replace('locked-mode', 'unlocked-mode');
+                    lockIcon.innerText = "🔓";
+                    lockText.innerText = "Unlocked (Pan/Zoom)";
+                }
+            });
+
+            // Pointer Events for Mouse & Touch Dragging
+            interactionOverlay.addEventListener('pointerdown', (e) => {
+                if (e.pointerType === 'touch' && e.touches && e.touches.length > 1) return; // Handled by touch events
+                isDragging = true;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                interactionOverlay.setPointerCapture(e.pointerId);
+            });
+
+            interactionOverlay.addEventListener('pointermove', (e) => {
+                if (!isDragging) return;
+                e.preventDefault(); // Prevent accidental selection
+                const deltaX = e.clientX - lastX;
+                const deltaY = e.clientY - lastY;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                bookController.panExact(deltaX, deltaY);
+            });
+
+            interactionOverlay.addEventListener('pointerup', (e) => {
+                isDragging = false;
+                interactionOverlay.releasePointerCapture(e.pointerId);
+            });
+
+            // Touch Events strictly for Pinch-to-Zoom
+            interactionOverlay.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 2) {
+                    isDragging = false; // Disable dragging during pinch
+                    initialPinchDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    initialScale = bookController.scale;
+                }
+            });
+
+            interactionOverlay.addEventListener('touchmove', (e) => {
+                if (e.touches.length === 2 && initialPinchDist) {
+                    e.preventDefault(); // Prevent browser zoom/scroll
+                    const currentDist = Math.hypot(
+                        e.touches[0].clientX - e.touches[1].clientX,
+                        e.touches[0].clientY - e.touches[1].clientY
+                    );
+                    const scaleRatio = currentDist / initialPinchDist;
+                    const newScale = initialScale * scaleRatio;
+                    
+                    const centerX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                    const centerY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                    bookController.zoomExact(newScale, centerX, centerY);
+                }
+            });
+
+            interactionOverlay.addEventListener('touchend', (e) => {
+                if (e.touches.length < 2) initialPinchDist = null;
+            });
+        }
+
+        // --- UI & Controls ---
         function initControls() {
-            // Pagination
-            document.getElementById('first-page').onclick = () => { if (currentPageNum !== 1) pageFlip.turnToPage(0); };
             document.getElementById('prev-page').onclick = () => { if (currentPageNum > 1) pageFlip.prev(); };
             document.getElementById('next-page').onclick = () => { if (currentPageNum < totalPages) pageFlip.next(); };
-            document.getElementById('last-page').onclick = () => { if (currentPageNum !== totalPages) pageFlip.turnToPage(totalPages - 1); };
-
+            
             document.getElementById('jump-go').onclick = () => {
-                let target = parseInt(jumpInput.value);
-                if (target > 0 && target <= totalPages) { pageFlip.turnToPage(target - 1); }
-                jumpInput.value = ''; 
+                let t = parseInt(document.getElementById('jump-page-input').value);
+                if (t > 0 && t <= totalPages) pageFlip.turnToPage(t - 1);
             };
 
-            // Zoom Controls
-            document.getElementById('zoom-in').onclick = () => bookController.zoom(1);
-            document.getElementById('zoom-out').onclick = () => bookController.zoom(-1);
+            const getCenter = () => {
+                const rect = viewerContainer.getBoundingClientRect();
+                return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+            };
+
+            document.getElementById('zoom-in').onclick = () => {
+                const center = getCenter();
+                bookController.zoomExact(bookController.scale + 0.3, center.x, center.y);
+            };
+            document.getElementById('zoom-out').onclick = () => {
+                const center = getCenter();
+                bookController.zoomExact(bookController.scale - 0.3, center.x, center.y);
+            };
             document.getElementById('fit-screen').onclick = triggerFitToScreen;
 
-            // Pan Controls
-            document.getElementById('pan-left').onclick = () => bookController.pan(1, 0);
-            document.getElementById('pan-right').onclick = () => bookController.pan(-1, 0);
-            document.getElementById('pan-up').onclick = () => bookController.pan(0, 1);
-            document.getElementById('pan-down').onclick = () => bookController.pan(0, -1);
-
-            // Fullscreen Mode
+            // Native Fullscreen Logic
             const btnFullscreen = document.getElementById('toggle-fullscreen');
             btnFullscreen.onclick = () => {
                 if (!document.fullscreenElement) {
                     viewerContainer.requestFullscreen().catch(err => {
-                        alert(`Error attempting to enable fullscreen: ${err.message}`);
+                        alert(`Fullscreen error: ${err.message}`);
                     });
-                    btnFullscreen.innerText = "><"; 
                 } else {
                     document.exitFullscreen();
-                    btnFullscreen.innerText = "[ ]"; 
                 }
             };
-            
-            // Re-fit matrix bounds when screen resizes or enters fullscreen
+
+            // Re-calculate bounds on resize or fullscreen toggle
             window.addEventListener('resize', triggerFitToScreen);
+            document.addEventListener('fullscreenchange', () => {
+                if (document.fullscreenElement) {
+                    btnFullscreen.innerText = "[ Exit Full ]";
+                } else {
+                    btnFullscreen.innerText = "[ Full Screen ]";
+                }
+                setTimeout(triggerFitToScreen, 100); // Small delay to allow CSS reflow
+            });
         }
     </script>
 </body>
