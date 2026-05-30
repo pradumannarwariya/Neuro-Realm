@@ -3,166 +3,403 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF Flipbook Reader</title>
+    <title>CYBER-READER v1.0 | Praduman Narwariya</title>
     
+    <!-- Using a blocky, tech-style font from Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+
     <style>
+        /* Cyberspace Visual Base */
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f9;
+            font-family: 'Orbitron', sans-serif;
+            background-color: #00000a;
+            /* Subtly animated digital grid background */
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px, 50px 50px;
+            background-position: center;
+            animation: grid-scroll 10s linear infinite;
+            
+            color: #00ffff;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 20px;
+            min-height: 100vh;
             margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-x: hidden;
         }
 
-        .header {
+        @keyframes grid-scroll {
+            from { background-position: center 0, center 0; }
+            to { background-position: center 100px, center 100px; }
+        }
+
+        /* --- Header & Layout --- */
+        .cyber-header {
             text-align: center;
-            margin-bottom: 20px;
-        }
-
-        #upload-btn {
-            padding: 10px 20px;
-            font-size: 16px;
-            cursor: pointer;
-            background-color: #007bff;
-            color: white;
-            border: none;
+            margin-bottom: 30px;
+            padding: 15px;
+            border: 2px solid #00ffff;
+            background-color: rgba(0, 0, 10, 0.8);
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5), inset 0 0 10px rgba(0, 255, 255, 0.3);
             border-radius: 5px;
         }
 
-        /* Container for the flipbook */
-        .flipbook-container {
-            display: none; /* Hidden until a PDF is loaded */
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        .cyber-header h1 {
+            margin: 0;
+            color: #ff00ff;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 0, 255, 0.8), 0 0 20px rgba(255, 0, 255, 0.5);
         }
 
-        /* Styling for individual pages */
-        .page {
-            background-color: white;
+        .cyber-header p { margin: 10px 0 0; color: #00ffff; text-shadow: 0 0 5px rgba(0, 255, 255, 0.5); font-size: 14px; }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+        }
+
+        /* --- Input & Control Styling --- */
+        .upload-section {
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: center;
+            width: 100%;
+        }
+
+        input[type="file"] { display: none; }
+
+        .cyber-btn {
+            padding: 12px 24px;
+            font-size: 16px;
+            cursor: pointer;
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            background-color: transparent;
+            color: #00ffff;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: all 0.3s ease;
+            outline: none;
+            text-shadow: 0 0 5px rgba(0, 255, 255, 0.5);
+        }
+
+        .cyber-btn:hover {
+            border-color: #ff00ff;
+            color: #ff00ff;
+            box-shadow: 0 0 15px rgba(255, 0, 255, 0.7);
+            text-shadow: 0 0 10px rgba(255, 0, 255, 1);
+        }
+
+        .cyber-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* --- Control Panel Styling --- */
+        #control-panel {
+            display: none; /* Hidden until PDF loads */
+            background-color: rgba(0, 0, 10, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 5px;
+            padding: 10px 20px;
+            margin-top: 25px;
+            width: 100%;
+            max-width: 800px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-sizing: border-box;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.3);
+        }
+
+        .nav-buttons, .utility-buttons { display: flex; gap: 10px; align-items: center; }
+
+        .page-display { font-weight: bold; color: #ff00ff; text-shadow: 0 0 5px rgba(255, 0, 255, 0.5); font-size: 16px; min-width: 120px; text-align: center;}
+
+        .jump-input {
+            width: 50px;
+            background-color: #111;
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            padding: 8px;
+            border-radius: 3px;
+            text-align: center;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 16px;
+        }
+        .jump-input:focus { outline: none; border-color: #ff00ff; box-shadow: 0 0 5px rgba(255, 0, 255, 0.5); }
+
+        /* Icon styling (using simple text characters for simplicity) */
+        .icon { font-size: 20px; line-height: 1; }
+
+        /* --- Flipbook Container --- */
+        .flipbook-container {
+            display: none; /* Hidden until loaded */
+            position: relative;
+            background-color: transparent;
+            z-index: 10; /* Ensure it is above the background grid */
+        }
+
+        #flipbook {
+            border: 3px solid #ff00ff;
+            border-radius: 5px;
             overflow: hidden;
+            box-shadow: 0 0 25px rgba(255, 0, 255, 0.6), inset 0 0 15px rgba(255, 0, 255, 0.4);
+        }
+
+        .page {
+            background-color: #111; /* Dark page background */
+            color: #888;
+            border: 1px solid #222;
+            box-sizing: border-box;
+            /* Placeholder styling */
+            font-size: 14px;
+            letter-spacing: 1px;
+            padding: 20px;
             display: flex;
             justify-content: center;
             align-items: center;
-            border: 1px solid #ddd;
+            text-align: center;
         }
 
-        .page canvas {
-            max-width: 100%;
-            max-height: 100%;
+        .page canvas { display: block; max-width: 100%; max-height: 100%; }
+
+        /* Fullscreen-specific style */
+        :-webkit-full-screen #flipbook { border: none; box-shadow: none; }
+        :-moz-full-screen #flipbook { border: none; box-shadow: none; }
+        :-ms-full-screen #flipbook { border: none; box-shadow: none; }
+        :full-screen #flipbook { border: none; box-shadow: none; }
+        :fullscreen #flipbook { border: none; box-shadow: none; }
+
+        /* --- Footer --- */
+        .cyber-footer {
+            margin-top: 40px;
+            padding: 10px 0;
+            text-align: center;
+            width: 100%;
+            border-top: 1px solid #00ffff;
+            color: rgba(0, 255, 255, 0.7);
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 3px rgba(0, 255, 255, 0.3);
         }
+        .creator-name { font-weight: bold; color: #ff00ff; text-shadow: 0 0 5px rgba(255, 0, 255, 0.5); }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>Interactive PDF Flipbook</h1>
-        <p>Upload a PDF to start reading!</p>
-        <input type="file" id="pdf-upload" accept="application/pdf">
-    </div>
+    <header class="cyber-header">
+        <h1>// Cyber-Reader</h1>
+        <p>:: Large Document PDF Interface :: v1.0</p>
+    </header>
 
-    <div class="flipbook-container">
-        <div id="flipbook"></div>
-    </div>
+    <main class="main-content">
+        <!-- Step 1: Digital Upload Portal -->
+        <section class="upload-section">
+            <label for="pdf-upload" class="cyber-btn" id="upload-btn-label">
+                _ Initialize PDF Portal _
+            </label>
+            <input type="file" id="pdf-upload" accept="application/pdf">
+        </section>
 
+        <!-- Step 2: The Flipbook Viewer -->
+        <div class="flipbook-container" id="viewer-container">
+            <div id="flipbook"></div>
+
+            <!-- New Cyberspace Control Panel -->
+            <div id="control-panel">
+                <div class="nav-buttons">
+                    <button id="first-page" class="cyber-btn icon" title="First Page">|&lt;</button>
+                    <button id="prev-page" class="cyber-btn icon" title="Previous Page">&lt;</button>
+                    <span class="page-display" id="page-counter">PG -- / --</span>
+                    <button id="next-page" class="cyber-btn icon" title="Next Page">&gt;</button>
+                    <button id="last-page" class="cyber-btn icon" title="Last Page">&gt;|</button>
+                </div>
+                
+                <div class="utility-buttons">
+                    <label>Go To:</label>
+                    <input type="number" id="jump-page-input" class="jump-input" placeholder="#" min="1">
+                    <button id="jump-go" class="cyber-btn" title="Jump to Page">Go</button>
+                    <button id="toggle-fullscreen" class="cyber-btn icon" title="Toggle Full Screen">[ ]</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Step 3: Creator Credit (required) -->
+    <footer class="cyber-footer">
+        [ System designed and coded by :: <span class="creator-name">Praduman Narwariya</span> ]
+    </footer>
+
+    <!-- External Libraries (Keeping PDF.js and StPageFlip) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-    
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
 
     <script>
-        // Set up the PDF.js worker (required for PDF.js to function)
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
-        // Get DOM elements
         const fileInput = document.getElementById('pdf-upload');
-        const flipbookContainer = document.querySelector('.flipbook-container');
+        const uploadBtnLabel = document.getElementById('upload-btn-label');
+        const viewerContainer = document.getElementById('viewer-container');
         const flipbookEl = document.getElementById('flipbook');
+        const controlPanel = document.getElementById('control-panel');
+        const pageCounter = document.getElementById('page-counter');
+        const jumpInput = document.getElementById('jump-page-input');
 
-        let pageFlip = null; // Variable to store our flipbook instance
+        // New Control references
+        const btnFirst = document.getElementById('first-page');
+        const btnPrev = document.getElementById('prev-page');
+        const btnNext = document.getElementById('next-page');
+        const btnLast = document.getElementById('last-page');
+        const btnJump = document.getElementById('jump-go');
+        const btnFullscreen = document.getElementById('toggle-fullscreen');
 
-        // Listen for when a user selects a file
+        let pageFlip = null; 
+        let pdfDoc = null;
+        let totalPages = 0;
+        let currentPageNum = 1;
+
+        // --- Core PDF Loading Logic ---
         fileInput.addEventListener('change', async function(e) {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
+                uploadBtnLabel.innerText = "_ Loading Data... _";
                 const fileReader = new FileReader();
-
-                // When the file is read, process it
                 fileReader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
                     await loadPDF(typedarray);
                 };
-
-                // Read the file as an ArrayBuffer
                 fileReader.readAsArrayBuffer(file);
-            } else {
-                alert("Please select a valid PDF file.");
-            }
+            } else { alert("SYSTEM ALERT: Invalid file type. PDF required."); }
         });
 
-        // Function to load and render the PDF
         async function loadPDF(pdfData) {
-            // Reset the flipbook container if a previous PDF was loaded
+            // Cleanup
             flipbookEl.innerHTML = '';
-            if (pageFlip) {
-                pageFlip.destroy();
+            if (pageFlip) { pageFlip.destroy(); }
+
+            try {
+                const loadingTask = pdfjsLib.getDocument(pdfData);
+                pdfDoc = await loadingTask.promise;
+                totalPages = pdfDoc.numPages;
+                jumpInput.max = totalPages;
+
+                const pageWidth = 400; // Book dimension base
+                const pageHeight = 600;
+
+                // 1. Create Placeholder pages (300 pages is fast this way!)
+                for (let i = 1; i <= totalPages; i++) {
+                    const pageDiv = document.createElement('div');
+                    pageDiv.classList.add('page');
+                    pageDiv.dataset.pageNum = i; 
+                    pageDiv.innerHTML = `[ SYS::PAGE.${i}.LOADING ]`;
+                    flipbookEl.appendChild(pageDiv);
+                }
+
+                // Show interface
+                viewerContainer.style.display = 'block';
+                controlPanel.style.display = 'flex';
+                uploadBtnLabel.style.display = 'none';
+
+                // 2. Initialize StPageFlip
+                pageFlip = new St.PageFlip(flipbookEl, {
+                    width: pageWidth, height: pageHeight, size: "fixed",
+                    minWidth: pageWidth, maxWidth: pageWidth * 2,
+                    minHeight: pageHeight, maxHeight: pageHeight * 2,
+                    maxShadowOpacity: 0.6, showCover: true, mobileScrollSupport: false
+                });
+
+                pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+                currentPageNum = 1;
+                updatePageCounter(currentPageNum);
+
+                // 3. Render initial block (pages 1-4)
+                for(let i = 1; i <= Math.min(4, totalPages); i++) { renderPage(i, pageWidth, pageHeight); }
+
+                // 4. Hook up background loading during flip
+                pageFlip.on('flip', (e) => {
+                    currentPageNum = e.data + 1;
+                    updatePageCounter(currentPageNum);
+                    
+                    // Lazy load neighbors
+                    renderPage(currentPageNum - 1, pageWidth, pageHeight);
+                    renderPage(currentPageNum, pageWidth, pageHeight);
+                    renderPage(currentPageNum + 1, pageWidth, pageHeight);
+                    renderPage(currentPageNum + 2, pageWidth, pageHeight);
+                });
+
+                // 5. Initialize New Controls
+                initControls();
+
+            } catch (error) {
+                console.error("PDF Load error:", error);
+                alert("SYSTEM FAILURE: Unable to load PDF document.");
             }
+        }
 
-            // Load the PDF document
-            const loadingTask = pdfjsLib.getDocument(pdfData);
-            const pdf = await loadingTask.promise;
-            
-            // Define standard dimensions for our flipbook pages
-            const pageWidth = 400;
-            const pageHeight = 600;
+        // --- Helper Function: Render-On-Demand ---
+        async function renderPage(pageNum, pw, ph) {
+            if (pageNum < 1 || pageNum > totalPages) return;
+            const pageDiv = document.querySelector(`.page[data-page-num="${pageNum}"]`);
+            if (!pageDiv || pageDiv.querySelector('canvas')) return; // Already rendered or invalid
 
-            // Loop through all the pages in the PDF
-            for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-                const page = await pdf.getPage(pageNum);
-                
-                // Calculate scale to fit our defined dimensions
-                const viewport = page.getViewport({ scale: 1 });
-                const scale = Math.min(pageWidth / viewport.width, pageHeight / viewport.height);
-                const scaledViewport = page.getViewport({ scale: scale });
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 1 });
+            const scale = Math.min(pw / viewport.width, ph / viewport.height);
+            const scaledViewport = page.getViewport({ scale: scale });
 
-                // Create a canvas element for this page
-                const canvas = document.createElement('canvas');
-                const context = canvas.getContext('2d');
-                canvas.width = scaledViewport.width;
-                canvas.height = scaledViewport.height;
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            canvas.width = scaledViewport.width;
+            canvas.height = scaledViewport.height;
 
-                // Render the PDF page into the canvas
-                const renderContext = {
-                    canvasContext: context,
-                    viewport: scaledViewport
-                };
-                await page.render(renderContext).promise;
+            await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
 
-                // Create a div wrapper for the page and append the canvas
-                const pageDiv = document.createElement('div');
-                pageDiv.classList.add('page');
-                pageDiv.appendChild(canvas);
-                flipbookEl.appendChild(pageDiv);
-            }
+            pageDiv.innerHTML = ''; // Clear '[ SYS... ]' text
+            pageDiv.appendChild(canvas);
+        }
 
-            // Show the flipbook container
-            flipbookContainer.style.display = 'block';
+        // --- New Control Functionality ---
+        function updatePageCounter(num) {
+            pageCounter.innerHTML = `PG <span style="color:#00ffff">${num}</span> / ${totalPages}`;
+        }
 
-            // Initialize the StPageFlip library
-            pageFlip = new St.PageFlip(flipbookEl, {
-                width: pageWidth,
-                height: pageHeight,
-                size: "fixed", // Ensure pages stay the defined size
-                minWidth: 300,
-                maxWidth: 600,
-                minHeight: 400,
-                maxHeight: 800,
-                maxShadowOpacity: 0.5, // Adds a realistic shadow in the center fold
-                showCover: true,       // Treats the first and last pages as covers
-                mobileScrollSupport: false // Prevents weird scrolling issues on phones
-            });
+        function initControls() {
+            // Navigation
+            btnFirst.onclick = () => { if (currentPageNum !== 1) pageFlip.turnToPage(0); };
+            btnPrev.onclick = () => { if (currentPageNum > 1) pageFlip.prev(); };
+            btnNext.onclick = () => { if (currentPageNum < totalPages) pageFlip.next(); };
+            btnLast.onclick = () => { if (currentPageNum !== totalPages) pageFlip.turnToPage(totalPages - 1); };
 
-            // Load the HTML elements into the flipbook
-            pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+            // Jump to Page
+            btnJump.onclick = () => {
+                let target = parseInt(jumpInput.value);
+                if (target > 0 && target <= totalPages) { pageFlip.turnToPage(target - 1); }
+                else { alert(`SYSTEM ALERT: Range (1 - ${totalPages}) only.`); }
+                jumpInput.value = ''; // clear input
+            };
+
+            // Fullscreen Mode
+            btnFullscreen.onclick = () => {
+                if (!document.fullscreenElement) {
+                    viewerContainer.requestFullscreen().catch(err => {
+                        alert(`FULLSCREEN FAILURE: ${err.message}`);
+                    });
+                    btnFullscreen.innerText = "><"; // Icon change (restore)
+                } else {
+                    document.exitFullscreen();
+                    btnFullscreen.innerText = "[ ]"; // Icon change (maximize)
+                }
+            };
         }
     </script>
 </body>
