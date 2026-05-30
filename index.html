@@ -1,10 +1,187 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-  <title>My WebApp</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Flipbook Reader - Optimized</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        #upload-btn {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
+
+        .flipbook-container {
+            display: none; 
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .page {
+            background-color: white;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 1px solid #ddd;
+            font-size: 18px;
+            color: #888;
+        }
+
+        .page canvas {
+            max-width: 100%;
+            max-height: 100%;
+        }
+    </style>
 </head>
 <body>
-  <h1>Hello from Frontend</h1>
-  <p>This page is served by Flask backend.</p>
+
+    <div class="header">
+        <h1>Interactive PDF Flipbook</h1>
+        <p>Upload a large PDF (like a 300-page book) to start reading!</p>
+        <input type="file" id="pdf-upload" accept="application/pdf">
+    </div>
+
+    <div class="flipbook-container">
+        <div id="flipbook"></div>
+    </div>
+
+    <!-- External Libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const fileInput = document.getElementById('pdf-upload');
+        const flipbookContainer = document.querySelector('.flipbook-container');
+        const flipbookEl = document.getElementById('flipbook');
+
+        let pageFlip = null; 
+
+        fileInput.addEventListener('change', async function(e) {
+            const file = e.target.files[0];
+            if (file && file.type === 'application/pdf') {
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    await loadPDF(typedarray);
+                };
+                fileReader.readAsArrayBuffer(file);
+            } else {
+                alert("Please select a valid PDF file.");
+            }
+        });
+
+        async function loadPDF(pdfData) {
+            // Clean up previous sessions
+            flipbookEl.innerHTML = '';
+            if (pageFlip) {
+                pageFlip.destroy();
+            }
+
+            const loadingTask = pdfjsLib.getDocument(pdfData);
+            const pdf = await loadingTask.promise;
+            
+            const pageWidth = 400;
+            const pageHeight = 600;
+            const numPages = pdf.numPages;
+
+            // STEP 1: Create empty placeholder pages for the entire book
+            for (let i = 1; i <= numPages; i++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.classList.add('page');
+                // Store the page number as a data attribute so we can find it later
+                pageDiv.dataset.pageNum = i; 
+                pageDiv.innerHTML = `Loading Page ${i}...`;
+                flipbookEl.appendChild(pageDiv);
+            }
+
+            flipbookContainer.style.display = 'block';
+
+            // STEP 2: Initialize the flipbook with the empty pages
+            pageFlip = new St.PageFlip(flipbookEl, {
+                width: pageWidth,
+                height: pageHeight,
+                size: "fixed",
+                minWidth: 300,
+                maxWidth: 600,
+                minHeight: 400,
+                maxHeight: 800,
+                maxShadowOpacity: 0.5,
+                showCover: true,
+                mobileScrollSupport: false
+            });
+
+            pageFlip.loadFromHTML(document.querySelectorAll('.page'));
+
+            // Helper Function: Renders a specific page only when asked
+            async function renderPage(pageNum) {
+                // Ignore if the page number is out of bounds
+                if (pageNum < 1 || pageNum > numPages) return;
+
+                // Find the placeholder div we created earlier
+                const pageDiv = document.querySelector(`.page[data-page-num="${pageNum}"]`);
+                
+                // If it already has a canvas, it means we already rendered it! Skip.
+                if (pageDiv.querySelector('canvas')) return;
+
+                // Process the PDF page
+                const page = await pdf.getPage(pageNum);
+                const viewport = page.getViewport({ scale: 1 });
+                const scale = Math.min(pageWidth / viewport.width, pageHeight / viewport.height);
+                const scaledViewport = page.getViewport({ scale: scale });
+
+                const canvas = document.createElement('canvas');
+                const context = canvas.getContext('2d');
+                canvas.width = scaledViewport.width;
+                canvas.height = scaledViewport.height;
+
+                await page.render({ canvasContext: context, viewport: scaledViewport }).promise;
+
+                // Clear the "Loading..." text and add the actual image
+                pageDiv.innerHTML = '';
+                pageDiv.appendChild(canvas);
+            }
+
+            // STEP 3: Render only the first 4 pages to start
+            for(let i = 1; i <= 4; i++) {
+                renderPage(i);
+            }
+
+            // STEP 4: Listen for the user flipping the page
+            pageFlip.on('flip', (e) => {
+                // e.data gives us the 0-based index of the page being turned to
+                const targetPageNum = e.data + 1;
+                
+                // Pre-load the current page and the next couple of pages
+                // so they are ready by the time the user turns to them
+                renderPage(targetPageNum - 1);
+                renderPage(targetPageNum);
+                renderPage(targetPageNum + 1);
+                renderPage(targetPageNum + 2);
+            });
+        }
+    </script>
 </body>
 </html>
+
