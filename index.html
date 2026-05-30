@@ -3,9 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Custom 3D PDF Flipbook</title>
+    <title>3D PDF Flipbook with Toolbar</title>
     <style>
-        /* A nice dark background to make the white pages pop */
         body {
             font-family: Arial, sans-serif;
             background-color: #2c3e50;
@@ -13,110 +12,197 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
             min-height: 100vh;
             margin: 0;
-            overflow: hidden;
+            overflow: hidden; /* Prevents scrollbars during zoom */
         }
 
-        h1 {
-            margin-bottom: 20px;
+        /* --- NEW: Toolbar Styling --- */
+        #toolbar {
+            background-color: #34495e;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            z-index: 10; /* Ensures toolbar stays on top of the zoomed book */
         }
 
-        /* The container for our 3D book */
+        button {
+            padding: 8px 16px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        }
+
+        button:hover { background-color: #2980b9; }
+        
+        input[type="number"] {
+            width: 50px;
+            padding: 5px;
+            text-align: center;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .divider {
+            width: 2px;
+            height: 30px;
+            background-color: #7f8c8d;
+            margin: 0 10px;
+        }
+
+        /* --- NEW: Zoom Wrapper --- */
+        #zoom-wrapper {
+            transition: transform 0.3s ease; /* Smooth zoom animation */
+            transform-origin: top center;
+        }
+
         #book-container {
             width: 800px;
             height: 500px;
             position: relative;
         }
 
-        /* Styling for the individual 3D pages */
         .my-page {
             background-color: white;
             border: 1px solid #ddd;
             overflow: hidden;
-            /* Adds a slight shadow to make the pages look physical */
             box-shadow: inset -2px 0 5px rgba(0,0,0,0.1); 
         }
 
-        /* Ensure our drawn PDF canvases fill their parent pages perfectly */
         .my-page canvas {
             width: 100%;
             height: 100%;
-            object-fit: contain; /* Keeps the PDF aspect ratio intact */
+            object-fit: contain; 
         }
     </style>
 </head>
 <body>
 
-    <h1>3D PDF Flipbook</h1>
+    <div id="toolbar">
+        <button id="btn-prev">Prev Page</button>
+        <span>Page: <input type="number" id="page-input" value="1" min="1"> / <span id="page-total">?</span></span>
+        <button id="btn-next">Next Page</button>
+        
+        <div class="divider"></div>
+        
+        <button id="btn-zoom-out">Zoom -</button>
+        <button id="btn-zoom-in">Zoom +</button>
+    </div>
     
-    <div id="book-container">
-        </div>
+    <div id="zoom-wrapper">
+        <div id="book-container">
+            </div>
+    </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
     
     <script>
-        // Use the Mozilla test PDF
         const url = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
-        
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
         const bookContainer = document.getElementById('book-container');
+        let pageFlipInstance = null; // Store globally so our buttons can access it
+        let totalPages = 0;
 
-        // Step 1: Load the PDF document
+        // Zoom State
+        let currentZoom = 1.0;
+        const zoomWrapper = document.getElementById('zoom-wrapper');
+
         pdfjsLib.getDocument(url).promise.then(pdfDoc => {
-            const numPages = pdfDoc.numPages;
+            totalPages = pdfDoc.numPages;
+            document.getElementById('page-total').textContent = totalPages;
+            
             const pageElements = [];
 
-            // Step 2: Create a physical HTML div and Canvas for every page
-            for (let i = 1; i <= numPages; i++) {
+            // Generate HTML pages
+            for (let i = 1; i <= totalPages; i++) {
                 const pageDiv = document.createElement('div');
                 pageDiv.className = 'my-page';
-                
                 const canvas = document.createElement('canvas');
                 pageDiv.appendChild(canvas);
                 bookContainer.appendChild(pageDiv);
-                
-                // Store a reference to render it shortly
                 pageElements.push({ pageNum: i, canvas: canvas });
             }
 
-            // Step 3: Initialize the 3D Flipbook engine
-            // We do this BEFORE drawing the PDFs so the book structure is ready
-            const pageFlip = new St.PageFlip(bookContainer, {
-                width: 400, // Width of a single page
-                height: 500, // Height of a single page
-                showCover: true, // First page acts like a hard cover
-                maxShadowOpacity: 0.5, // Realistic shadows in the center fold
+            // Initialize PageFlip
+            pageFlipInstance = new St.PageFlip(bookContainer, {
+                width: 400, 
+                height: 500, 
+                showCover: true, 
+                maxShadowOpacity: 0.5, 
             });
 
-            // Tell PageFlip to use the divs we just created
-            pageFlip.loadFromHTML(document.querySelectorAll('.my-page'));
+            pageFlipInstance.loadFromHTML(document.querySelectorAll('.my-page'));
 
-            // Step 4: Render the actual PDF content onto our empty canvases
+            // Render PDF onto canvases
             pageElements.forEach(item => {
                 pdfDoc.getPage(item.pageNum).then(page => {
-                    // Get original PDF dimensions
                     const viewport = page.getViewport({ scale: 1.5 });
-                    
-                    // Set canvas internal resolution to match PDF for crisp text
                     item.canvas.width = viewport.width;
                     item.canvas.height = viewport.height;
-                    
-                    const renderCtx = {
+                    page.render({
                         canvasContext: item.canvas.getContext('2d'),
                         viewport: viewport
-                    };
-                    
-                    // Draw the page
-                    page.render(renderCtx);
+                    });
                 });
             });
 
-        }).catch(err => {
-            console.error("Error loading PDF: ", err);
+            // --- NEW: Event Listener to sync UI when a page is turned manually ---
+            pageFlipInstance.on('flip', (e) => {
+                // e.data holds the current page index (starts at 0)
+                document.getElementById('page-input').value = e.data + 1;
+            });
+
+        }).catch(err => console.error("Error loading PDF: ", err));
+
+        // --- NEW: Toolbar Button Logic ---
+
+        // Previous Page
+        document.getElementById('btn-prev').addEventListener('click', () => {
+            if (pageFlipInstance) pageFlipInstance.flipPrev();
+        });
+
+        // Next Page
+        document.getElementById('btn-next').addEventListener('click', () => {
+            if (pageFlipInstance) pageFlipInstance.flipNext();
+        });
+
+        // Jump to specific page via input
+        document.getElementById('page-input').addEventListener('change', (e) => {
+            if (!pageFlipInstance) return;
+            let targetPage = parseInt(e.target.value, 10) - 1; // Convert human page to array index
+            
+            // Keep within boundaries
+            if (targetPage < 0) targetPage = 0;
+            if (targetPage >= totalPages) targetPage = totalPages - 1;
+            
+            pageFlipInstance.flip(targetPage);
+            e.target.value = targetPage + 1; // Reset input to valid number if they typed out of bounds
+        });
+
+        // Zoom In
+        document.getElementById('btn-zoom-in').addEventListener('click', () => {
+            if (currentZoom < 2.5) { // Cap max zoom
+                currentZoom += 0.2;
+                zoomWrapper.style.transform = `scale(${currentZoom})`;
+            }
+        });
+
+        // Zoom Out
+        document.getElementById('btn-zoom-out').addEventListener('click', () => {
+            if (currentZoom > 0.6) { // Cap min zoom
+                currentZoom -= 0.2;
+                zoomWrapper.style.transform = `scale(${currentZoom})`;
+            }
         });
     </script>
 </body>
