@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D PDF Flipbook with Toolbar, Upload, Panning, and Lock</title>
+    <title>3D PDF Flipbook - Large File Optimized</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -45,14 +45,10 @@
         }
 
         button:hover, .upload-label:hover { background-color: #2980b9; }
-        
         #btn-reset { background-color: #e67e22; }
         #btn-reset:hover { background-color: #d35400; }
-
-        /* --- NEW: Button styles for Full Screen and Lock --- */
         #btn-fullscreen { background-color: #8e44ad; }
         #btn-fullscreen:hover { background-color: #9b59b6; }
-        
         #btn-lock { background-color: #27ae60; }
         #btn-lock:hover { background-color: #2ecc71; }
 
@@ -64,9 +60,7 @@
             border: 1px solid #ccc;
         }
 
-        input[type="file"] {
-            display: none;
-        }
+        input[type="file"] { display: none; }
 
         .divider {
             width: 2px;
@@ -99,12 +93,29 @@
             height: 100%;
             object-fit: contain; 
         }
+
+        /* --- NEW: Loading Overlay Styling --- */
+        #loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-color: rgba(44, 62, 80, 0.9);
+            color: white;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            z-index: 9999;
+            display: none; /* Hidden by default */
+        }
     </style>
 </head>
 <body>
 
+    <div id="loading-overlay">Loading Large PDF... Please wait.</div>
+
     <div id="toolbar">
-        <label for="pdf-upload" class="upload-label">Upload</label>
+        <label for="pdf-upload" class="upload-label">Upload PDF</label>
         <input type="file" id="pdf-upload" accept="application/pdf">
 
         <div class="divider"></div>
@@ -136,16 +147,27 @@
 
         const bookContainer = document.getElementById('book-container');
         const zoomWrapper = document.getElementById('zoom-wrapper');
+        const loadingOverlay = document.getElementById('loading-overlay');
+        
         let pageFlipInstance = null; 
+        let pdfDocument = null; // Store the PDF object globally for lazy loading
         let totalPages = 0;
         
+        // Viewport & Lock States
         let currentZoom = 1.0;
         let isDragging = false;
         let startX = 0, startY = 0;
         let translateX = 0, translateY = 0;
-
-        // --- NEW: Lock State Variable ---
         let isLocked = false; 
+
+        // Memory Management States
+        let renderedPages = new Set();
+        let isRendering = new Set(); 
+        const PAGE_BUFFER = 4; // Renders 4 pages ahead and 4 pages behind
+
+        function showLoading(show) {
+            loadingOverlay.style.display = show ? 'flex' : 'none';
+        }
 
         function updateTransform() {
             zoomWrapper.style.transform = `translate(${translateX}px, ${translateY}px) scale(${currentZoom})`;
@@ -159,7 +181,74 @@
             updateTransform();
         }
 
+        // --- NEW: Smart Memory Management Function ---
+        function updateVisiblePages(currentIndex) {
+            if (!pdfDocument) return;
+
+            // Define which pages should be currently rendered in memory
+            const activeRange = [];
+            for (let i = Math.max(0, currentIndex - PAGE_BUFFER); i <= Math.min(totalPages - 1, currentIndex + PAGE_BUFFER); i++) {
+                activeRange.push(i);
+            }
+
+            // 1. Destroy canvases outside the active range to free up RAM
+            renderedPages.forEach(pageIndex => {
+                if (!activeRange.includes(pageIndex)) {
+                    const canvases = bookContainer.querySelectorAll('canvas');
+                    const canvas = canvases[pageIndex];
+                    if (canvas) {
+                        const ctx = canvas.getContext('2d');
+                        ctx.clearRect(0, 0, canvas.width, canvas.height); // Wipe graphics
+                        canvas.width = 0; // Wipe memory footprint
+                        canvas.height = 0;
+                    }
+                    renderedPages.delete(pageIndex);
+                }
+            });
+
+            // 2. Render new pages inside the active range
+            activeRange.forEach(pageIndex => {
+                if (!renderedPages.has(pageIndex) && !isRendering.has(pageIndex)) {
+                    renderSinglePage(pageIndex);
+                }
+            });
+        }
+
+        // --- NEW: Function to render just one page at a time ---
+        function renderSinglePage(pageIndex) {
+            isRendering.add(pageIndex); // Mark as currently processing
+
+            pdfDocument.getPage(pageIndex + 1).then(page => {
+                const canvases = bookContainer.querySelectorAll('canvas');
+                const canvas = canvases[pageIndex];
+                
+                if (!canvas) {
+                    isRendering.delete(pageIndex);
+                    return;
+                }
+
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                // alpha: false removes transparency, optimizing drawing speed slightly
+                const renderContext = {
+                    canvasContext: canvas.getContext('2d', { alpha: false }),
+                    viewport: viewport
+                };
+
+                page.render(renderContext).promise.then(() => {
+                    renderedPages.add(pageIndex);
+                    isRendering.delete(pageIndex);
+                }).catch(() => {
+                    isRendering.delete(pageIndex);
+                });
+            });
+        }
+
         function renderPDF(pdfSource) {
+            showLoading(true);
+
             if (pageFlipInstance) {
                 pageFlipInstance.destroy();
                 pageFlipInstance = null;
@@ -167,21 +256,22 @@
             
             bookContainer.innerHTML = ''; 
             resetView(); 
+            renderedPages.clear();
+            isRendering.clear();
             document.getElementById('page-input').value = 1;
 
             pdfjsLib.getDocument(pdfSource).promise.then(pdfDoc => {
+                pdfDocument = pdfDoc;
                 totalPages = pdfDoc.numPages;
                 document.getElementById('page-total').textContent = totalPages;
                 
-                const pageElements = [];
-
-                for (let i = 1; i <= totalPages; i++) {
+                // Create EMPTY DOM elements for all 300+ pages (Fast and low memory)
+                for (let i = 0; i < totalPages; i++) {
                     const pageDiv = document.createElement('div');
                     pageDiv.className = 'my-page';
                     const canvas = document.createElement('canvas');
                     pageDiv.appendChild(canvas);
                     bookContainer.appendChild(pageDiv);
-                    pageElements.push({ pageNum: i, canvas: canvas });
                 }
 
                 pageFlipInstance = new St.PageFlip(bookContainer, {
@@ -193,136 +283,108 @@
 
                 pageFlipInstance.loadFromHTML(document.querySelectorAll('.my-page'));
 
-                pageElements.forEach(item => {
-                    pdfDoc.getPage(item.pageNum).then(page => {
-                        const viewport = page.getViewport({ scale: 1.5 });
-                        item.canvas.width = viewport.width;
-                        item.canvas.height = viewport.height;
-                        page.render({
-                            canvasContext: item.canvas.getContext('2d'),
-                            viewport: viewport
-                        });
-                    });
-                });
+                // Render only the starting pages initially
+                updateVisiblePages(0);
+                showLoading(false);
 
+                // --- NEW: Update which pages are rendered when flipping ---
                 pageFlipInstance.on('flip', (e) => {
                     document.getElementById('page-input').value = e.data + 1;
+                    updateVisiblePages(e.data); // Dynamic memory management triggered here
                 });
 
             }).catch(err => {
                 console.error("Error loading PDF: ", err);
                 alert("There was an error loading the PDF.");
+                showLoading(false);
             });
         }
 
+        // Load the default demo PDF on startup
         const defaultUrl = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
         renderPDF(defaultUrl);
 
+        // Upload Logic
         document.getElementById('pdf-upload').addEventListener('change', function(e) {
             const file = e.target.files[0];
             if (file && file.type === 'application/pdf') {
-                const reader = new FileReader();
-                reader.onload = function(event) {
-                    const typedarray = new Uint8Array(event.target.result);
-                    renderPDF(typedarray);
-                };
-                reader.readAsArrayBuffer(file);
+                showLoading(true); // Trigger loading screen immediately
+                
+                // Use a slight timeout to allow the UI to update the loading screen before freezing up
+                setTimeout(() => {
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        const typedarray = new Uint8Array(event.target.result);
+                        renderPDF(typedarray);
+                    };
+                    reader.readAsArrayBuffer(file);
+                }, 100);
             }
             e.target.value = ''; 
         });
 
-        document.getElementById('btn-prev').addEventListener('click', () => {
-            if (pageFlipInstance) pageFlipInstance.flipPrev();
-        });
-
-        document.getElementById('btn-next').addEventListener('click', () => {
-            if (pageFlipInstance) pageFlipInstance.flipNext();
-        });
+        // Toolbar Logic (Same as before)
+        document.getElementById('btn-prev').addEventListener('click', () => { if (pageFlipInstance) pageFlipInstance.flipPrev(); });
+        document.getElementById('btn-next').addEventListener('click', () => { if (pageFlipInstance) pageFlipInstance.flipNext(); });
 
         document.getElementById('page-input').addEventListener('change', (e) => {
             if (!pageFlipInstance) return;
             let targetPage = parseInt(e.target.value, 10) - 1; 
-            
             if (targetPage < 0) targetPage = 0;
             if (targetPage >= totalPages) targetPage = totalPages - 1;
             
             pageFlipInstance.flip(targetPage);
             e.target.value = targetPage + 1; 
+            updateVisiblePages(targetPage); // Force update memory immediately on jump
         });
 
         document.getElementById('btn-zoom-in').addEventListener('click', () => {
-            if (isLocked) return; // Prevent zooming if locked
-            if (currentZoom < 2.5) { 
-                currentZoom += 0.2;
-                updateTransform();
-            }
+            if (isLocked) return; 
+            if (currentZoom < 2.5) { currentZoom += 0.2; updateTransform(); }
         });
 
         document.getElementById('btn-zoom-out').addEventListener('click', () => {
-            if (isLocked) return; // Prevent zooming if locked
-            if (currentZoom > 0.6) { 
-                currentZoom -= 0.2;
-                updateTransform();
-            }
+            if (isLocked) return; 
+            if (currentZoom > 0.6) { currentZoom -= 0.2; updateTransform(); }
         });
 
         document.getElementById('btn-reset').addEventListener('click', () => {
-            if (isLocked) return; // Prevent reset if locked
+            if (isLocked) return; 
             resetView();
         });
 
-        // --- NEW: Full Screen Logic ---
+        // Full Screen Logic
         const btnFullscreen = document.getElementById('btn-fullscreen');
-        
         btnFullscreen.addEventListener('click', () => {
             if (!document.fullscreenElement) {
-                // Request fullscreen on the entire document
-                document.documentElement.requestFullscreen().catch(err => {
-                    console.error(`Error attempting to enable fullscreen: ${err.message}`);
-                });
-            } else {
-                // Exit fullscreen
-                document.exitFullscreen();
-            }
+                document.documentElement.requestFullscreen().catch(err => { console.error(`Error: ${err.message}`); });
+            } else { document.exitFullscreen(); }
         });
 
-        // Listen for fullscreen changes (e.g., user pressing ESC key) to update button text
         document.addEventListener('fullscreenchange', () => {
-            if (document.fullscreenElement) {
-                btnFullscreen.textContent = 'Exit Full Screen';
-            } else {
-                btnFullscreen.textContent = 'Full Screen';
-            }
+            btnFullscreen.textContent = document.fullscreenElement ? 'Exit Full Screen' : 'Full Screen';
         });
 
-        // --- NEW: Lock Screen Logic ---
+        // Lock Screen Logic
         const btnLock = document.getElementById('btn-lock');
-        
         btnLock.addEventListener('click', () => {
             isLocked = !isLocked;
-            
             if (isLocked) {
                 btnLock.textContent = 'Unlock Screen';
-                btnLock.style.backgroundColor = '#c0392b'; // Change to Red
-                // Disable physical dragging of the flipbook pages
+                btnLock.style.backgroundColor = '#c0392b'; 
                 bookContainer.style.pointerEvents = 'none'; 
             } else {
                 btnLock.textContent = 'Lock Screen';
-                btnLock.style.backgroundColor = ''; // Revert to CSS default (Green)
-                // Re-enable physical dragging of the flipbook pages
+                btnLock.style.backgroundColor = ''; 
                 bookContainer.style.pointerEvents = 'auto'; 
             }
         });
 
         // Drag to Pan Logic
         window.addEventListener('mousedown', (e) => {
-            if (isLocked) return; // --- NEW: Prevent panning if locked
-            
+            if (isLocked) return; 
             if (e.target.closest('#toolbar')) return;
-
-            if (currentZoom === 1.0 && e.target.tagName.toLowerCase() === 'canvas') {
-                return;
-            }
+            if (currentZoom === 1.0 && e.target.tagName.toLowerCase() === 'canvas') return;
 
             isDragging = true;
             zoomWrapper.style.transition = 'none';
