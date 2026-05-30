@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Custom 3D PDF Flipbook</title>
+    <style>
+        /* A nice dark background to make the white pages pop */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #2c3e50;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        h1 {
+            margin-bottom: 20px;
+        }
+
+        /* The container for our 3D book */
+        #book-container {
+            width: 800px;
+            height: 500px;
+            position: relative;
+        }
+
+        /* Styling for the individual 3D pages */
+        .my-page {
+            background-color: white;
+            border: 1px solid #ddd;
+            overflow: hidden;
+            /* Adds a slight shadow to make the pages look physical */
+            box-shadow: inset -2px 0 5px rgba(0,0,0,0.1); 
+        }
+
+        /* Ensure our drawn PDF canvases fill their parent pages perfectly */
+        .my-page canvas {
+            width: 100%;
+            height: 100%;
+            object-fit: contain; /* Keeps the PDF aspect ratio intact */
+        }
+    </style>
+</head>
+<body>
+
+    <h1>3D PDF Flipbook</h1>
+    
+    <div id="book-container">
+        </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/page-flip/dist/js/page-flip.browser.js"></script>
+    
+    <script>
+        // Use the Mozilla test PDF
+        const url = 'https://raw.githubusercontent.com/mozilla/pdf.js/ba2edeae/web/compressed.tracemonkey-pldi-09.pdf';
+        
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const bookContainer = document.getElementById('book-container');
+
+        // Step 1: Load the PDF document
+        pdfjsLib.getDocument(url).promise.then(pdfDoc => {
+            const numPages = pdfDoc.numPages;
+            const pageElements = [];
+
+            // Step 2: Create a physical HTML div and Canvas for every page
+            for (let i = 1; i <= numPages; i++) {
+                const pageDiv = document.createElement('div');
+                pageDiv.className = 'my-page';
+                
+                const canvas = document.createElement('canvas');
+                pageDiv.appendChild(canvas);
+                bookContainer.appendChild(pageDiv);
+                
+                // Store a reference to render it shortly
+                pageElements.push({ pageNum: i, canvas: canvas });
+            }
+
+            // Step 3: Initialize the 3D Flipbook engine
+            // We do this BEFORE drawing the PDFs so the book structure is ready
+            const pageFlip = new St.PageFlip(bookContainer, {
+                width: 400, // Width of a single page
+                height: 500, // Height of a single page
+                showCover: true, // First page acts like a hard cover
+                maxShadowOpacity: 0.5, // Realistic shadows in the center fold
+            });
+
+            // Tell PageFlip to use the divs we just created
+            pageFlip.loadFromHTML(document.querySelectorAll('.my-page'));
+
+            // Step 4: Render the actual PDF content onto our empty canvases
+            pageElements.forEach(item => {
+                pdfDoc.getPage(item.pageNum).then(page => {
+                    // Get original PDF dimensions
+                    const viewport = page.getViewport({ scale: 1.5 });
+                    
+                    // Set canvas internal resolution to match PDF for crisp text
+                    item.canvas.width = viewport.width;
+                    item.canvas.height = viewport.height;
+                    
+                    const renderCtx = {
+                        canvasContext: item.canvas.getContext('2d'),
+                        viewport: viewport
+                    };
+                    
+                    // Draw the page
+                    page.render(renderCtx);
+                });
+            });
+
+        }).catch(err => {
+            console.error("Error loading PDF: ", err);
+        });
+    </script>
+</body>
+</html>
